@@ -4,23 +4,21 @@
 set -eu
 PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 HERDR="${HERDR_BIN_PATH:-herdr}"
-export HERDR
 
-lines=$("$HERDR" workspace list | python3 -c '
-import json, os, subprocess, sys
+tab=$(printf '\t')
 
-herdr = os.environ["HERDR"]
-workspaces = json.load(sys.stdin)["result"]["workspaces"]
-for w in workspaces:
-    out = subprocess.run(
-        [herdr, "tab", "list", "--workspace", str(w["number"])],
-        capture_output=True, text=True, check=True,
-    )
-    for t in json.loads(out.stdout)["result"]["tabs"]:
-        marker = "*" if w["focused"] and t["focused"] else " "
-        label = w["label"] + " / " + t["label"]
-        print(marker + " " + label + "\t" + w["workspace_id"] + "\t" + t["tab_id"])
-')
+lines=$("$HERDR" workspace list |
+  jq -r '.result.workspaces[] | [.number, .focused, .workspace_id, .label] | @tsv' |
+  while IFS="$tab" read -r num focused ws_id ws_label; do
+    "$HERDR" tab list --workspace "$num" |
+      jq -r --arg focused "$focused" --arg ws_id "$ws_id" --arg ws_label "$ws_label" '
+        .result.tabs[] |
+        [ (if $focused == "true" and .focused then "*" else " " end)
+            + " " + $ws_label + " / " + .label,
+          $ws_id,
+          .tab_id
+        ] | @tsv'
+  done)
 
 sel=$(printf '%s\n' "$lines" | fzf \
   --delimiter='\t' \
