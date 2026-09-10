@@ -1,0 +1,22 @@
+id = "sean.claude-usage"
+name = "Claude Usage"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Live sidebar of Claude Code token usage and estimated cost"
+platforms = ["macos", "linux"]
+
+# Opens the usage pane as a right-hand split (herdr's closest thing to a sidebar).
+[[actions]]
+id = "open"
+title = "Show Claude usage"
+contexts = ["workspace"]
+command = ["sh", "open-sidebar.sh"]
+
+# The pane itself: a long-running Node process that redraws the dashboard.
+# open-sidebar.sh sets the split direction/width at open time (width isn't
+# valid on a declared split pane, only on the pane-open command).
+[[panes]]
+id = "sidebar"
+title = "Claude Usage"
+placement = "split"
+command = ["node", "sidebar.js"]
